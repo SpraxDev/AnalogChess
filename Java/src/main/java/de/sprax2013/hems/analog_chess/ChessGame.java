@@ -62,18 +62,13 @@ public class ChessGame {
             }
         }
         if (getPossibleMoves(chessmanIndex).get(chessmanTargetIndex) == MoveType.EN_PASSANT) {
-            if (Math.abs(chessmanTargetIndex - chessmanIndex) == 7) {
-                cachedBoard[chessmanIndex + 1] = null;
-            } else {
-                cachedBoard[chessmanIndex - 1] = null;
-            }
+                int v = whiteMoving ? 1 : -1;
 
-      /*      if(chessmanTargetIndex+7==chessmanIndex){
-                cachedBoard[chessmanIndex+1]= null;
+            if (Math.abs(chessmanTargetIndex - chessmanIndex) == 7) {
+                cachedBoard[chessmanIndex + v] = null;
+            } else {
+                cachedBoard[chessmanIndex - v] = null;
             }
-            else{
-                cachedBoard[chessmanIndex-1]= null;
-            }*/
         }
 
         if (chessmen.type == Chessman.PAWN && Math.abs(chessmanIndex - chessmanTargetIndex) == 16) {
