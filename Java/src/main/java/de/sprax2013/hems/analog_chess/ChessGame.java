@@ -72,10 +72,12 @@ public class ChessGame {
                 cachedBoard[chessmanIndex - v] = null;
             }
         }
-        if(getPossibleMoves(chessmanIndex).get(chessmanTargetIndex)== MoveType.PROMOTION){
+        if(getPossibleMoves(chessmanIndex).get(chessmanTargetIndex)== MoveType.PROMOTION) {
 
-            //////////////////////
+            chessmen = new ActiveChessman(Chessman.QUEEN,whiteMoving);
+        }else if (getPossibleMoves(chessmanIndex).get(chessmanTargetIndex)== MoveType.UNDERPROMOTION){
 
+            chessmen =  new ActiveChessman(Chessman.KNIGHT,whiteMoving);
         }
 
         if (chessmen.type == Chessman.PAWN && Math.abs(chessmanIndex - chessmanTargetIndex) == 16) {
@@ -116,7 +118,7 @@ public class ChessGame {
         int x = index % 8;
         int y = index / 8;
 
-        System.out.println("( "+x+" | "+y+" )");
+      //  System.out.println("( "+x+" | "+y+" )");
 
 
         // TODO: Put each chessman into own method
