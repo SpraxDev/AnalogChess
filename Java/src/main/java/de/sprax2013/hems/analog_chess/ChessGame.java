@@ -3,12 +3,14 @@ package de.sprax2013.hems.analog_chess;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ChessGame {
     //    public final List<ChessMove> moves = new ArrayList<>(100);
     final ActiveChessman[] cachedBoard = new ActiveChessman[8 * 8];
 
     private boolean whitesTurn = true;
+    private char charWhite;
 
     public ChessGame() {
         // Set default positions
@@ -70,6 +72,11 @@ public class ChessGame {
                 cachedBoard[chessmanIndex - v] = null;
             }
         }
+        if(getPossibleMoves(chessmanIndex).get(chessmanTargetIndex)== MoveType.PROMOTION){
+
+            //////////////////////
+
+        }
 
         if (chessmen.type == Chessman.PAWN && Math.abs(chessmanIndex - chessmanTargetIndex) == 16) {
             chessmen.setDoublePawnMove(true);
@@ -109,9 +116,18 @@ public class ChessGame {
         int x = index % 8;
         int y = index / 8;
 
+        System.out.println("( "+x+" | "+y+" )");
+
+
         // TODO: Put each chessman into own method
 
+        AtomicReference<MoveType>forceQueen = new AtomicReference<>();
+
+
         Runnable bishop = () -> {
+
+            final MoveType forceMovetype = forceQueen.get();
+
             int tX = x;
             int tY = y;
 
@@ -124,12 +140,12 @@ public class ChessGame {
 
                 if (isOccupied(tX, tY)) {
                     if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {   // occupied by enemy
-                        result.put(tX + (tY * 8), MoveType.ATTACK);
+                        result.put(tX + (tY * 8), forceMovetype==null?MoveType.ATTACK:forceMovetype);
                     }
 
                     break;
                 } else {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
+                    result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
                 }
             }
 
@@ -143,7 +159,7 @@ public class ChessGame {
 
                 if (isOccupied(tX, tY)) {
                     if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {   // occupied by enemy
-                        result.put(tX + (tY * 8), MoveType.ATTACK);
+                        result.put(tX + (tY * 8), forceMovetype==null?MoveType.ATTACK:forceMovetype);
                     }
 
                     break;
@@ -191,7 +207,69 @@ public class ChessGame {
             }
         };
 
+
+        AtomicReference<MoveType>forceKnight = new AtomicReference<>();
+
+
+
+
+        Runnable knight = () -> {
+
+            final MoveType forceMovetype = forceKnight.get();
+
+            int tX = x + 1;
+            int tY = y + 2;
+
+            // TODO: cleanup
+
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tX = x - 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tY = y - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put((x - 1) + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tX = x + 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put((x + 1) + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tX = x + 2;
+            tY = y + 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tX = x - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tY = y - 1;
+            tX = x + 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+
+            tX = x - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
+            }
+        };
+
+
         Runnable rook = () -> {
+
+
+            final MoveType forceMovetype = forceQueen.get();
+
             int tX = x;
             int tY = y;
 
@@ -202,10 +280,10 @@ public class ChessGame {
 
                 if (!isOutOfBounds(tX, tY)) {
                     if (!isOccupied(tX, tY)) {
-                        result.put(tX + (tY * 8), MoveType.NORMAL);
+                        result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
                     } else {
                         if (isOccupiedBy(tX + (tY * 8), !chessman.whitesChessman)) {   // occupied by enemy
-                            result.put(tX + (tY * 8), MoveType.ATTACK);
+                            result.put(tX + (tY * 8), forceMovetype==null?MoveType.ATTACK:forceMovetype);
                         }
 
                         if (!mode) break;
@@ -225,10 +303,10 @@ public class ChessGame {
 
                 if (!isOutOfBounds(tX, tY)) {
                     if (!isOccupied(tX, tY)) {
-                        result.put(tX + (tY * 8), MoveType.NORMAL);
+                        result.put(tX + (tY * 8), forceMovetype==null?MoveType.NORMAL:forceMovetype);
                     } else {
                         if (isOccupiedBy(tX + (tY * 8), !chessman.whitesChessman)) {   // occupied by enemy
-                            result.put(tX + (tY * 8), MoveType.ATTACK);
+                            result.put(tX + (tY * 8), forceMovetype==null?MoveType.ATTACK:forceMovetype);
                         }
 
                         if (!mode) break;
@@ -243,6 +321,7 @@ public class ChessGame {
 
         switch (chessman.type) {
             case PAWN:
+
                 int field = index + (chessman.whitesChessman ? -8 : 8);
                 if (!isOutOfBounds(field) && !isOccupied(field)) {
                     result.put(field, MoveType.NORMAL);
@@ -277,53 +356,25 @@ public class ChessGame {
                     }
                 }
 
+
+
+                if (y == 0 || y == 7) {
+
+                    forceKnight.set(MoveType.UNDERPROMOTION);
+                    knight.run();
+
+                    forceQueen.set(MoveType.PROMOTION);
+                    bishop.run();
+                    rook.run();
+
+
+                    System.out.println("Promo");
+
+                }
+
                 break;
             case KNIGHT:
-                int tX = x + 1;
-                int tY = y + 2;
-
-                // TODO: cleanup
-
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
-
-                tX = x - 1;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
-
-                tY = y - 2;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put((x - 1) + (tY * 8), MoveType.NORMAL);
-                }
-
-                tX = x + 1;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put((x + 1) + (tY * 8), MoveType.NORMAL);
-                }
-
-                tX = x + 2;
-                tY = y + 1;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
-
-                tX = x - 2;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
-
-                tY = y - 1;
-                tX = x + 2;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
-
-                tX = x - 2;
-                if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
-                }
+                knight.run();
                 break;
             case BISHOP:
                 bishop.run();
