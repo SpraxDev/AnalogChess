@@ -1,8 +1,8 @@
 package de.sprax2013.hems.analog_chess;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 public class ChessGame {
     //    public final List<ChessMove> moves = new ArrayList<>(100);
@@ -62,7 +62,7 @@ public class ChessGame {
             }
         }
         if (getPossibleMoves(chessmanIndex).get(chessmanTargetIndex) == MoveType.EN_PASSANT) {
-                int v = whiteMoving ? 1 : -1;
+            int v = whiteMoving ? 1 : -1;
 
             if (Math.abs(chessmanTargetIndex - chessmanIndex) == 7) {
                 cachedBoard[chessmanIndex + v] = null;
@@ -102,7 +102,7 @@ public class ChessGame {
     }
 
     public Map<Integer, MoveType> getPossibleMoves(int index) {
-        Map<Integer, MoveType> result = new TreeMap<>();
+        Map<Integer, MoveType> result = new LinkedHashMap<>();
 
         ActiveChessman chessman = Objects.requireNonNull(getCachedChessman(index));
 
@@ -110,8 +110,6 @@ public class ChessGame {
         int y = index / 8;
 
         // TODO: Put each chessman into own method
-
-
 
         Runnable bishop = () -> {
             int tX = x;
@@ -246,7 +244,7 @@ public class ChessGame {
         switch (chessman.type) {
             case PAWN:
                 int field = index + (chessman.whitesChessman ? -8 : 8);
-                if (!isOccupied(field)) {
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
                     result.put(field, MoveType.NORMAL);
 
                     if (!chessman.hasMovedAtLeasOnce()) {
@@ -258,22 +256,22 @@ public class ChessGame {
                 }
 
                 field = index + (chessman.whitesChessman ? -7 : 7);
-                if (isOccupiedBy(field, !chessman.whitesChessman)) {
+                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
                     result.put(field, MoveType.ATTACK);
                 }
 
                 field = index + (chessman.whitesChessman ? -9 : 9);
-                if (isOccupiedBy(field, !chessman.whitesChessman)) {
+                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
                     result.put(field, MoveType.ATTACK);
                 }
                 field = index + (chessman.whitesChessman ? -7 : 9);
-                if (!isOccupied(field)) {
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
                     if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
                         result.put(field, MoveType.EN_PASSANT);
                     }
                 }
                 field = index + (chessman.whitesChessman ? -9 : 7);
-                if (!isOccupied(field)) {
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
                     if (isOccupiedBy(index - 1, !chessman.whitesChessman) && getCachedChessman(index - 1).hasDoublePawnMove()) {
                         result.put(field, MoveType.EN_PASSANT);
                     }
