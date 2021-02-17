@@ -55,8 +55,13 @@ public class ChessGui {
 
             gui.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             gui.setSize(75 * 8, 75 * 8);
-
             gui.getContentPane().setLayout(new GridLayout(8, 8));
+
+            try {
+                gui.setIconImage(Chessman.KING.getBlackImage());
+            } catch (IOException ex) {
+                System.err.println("Error setting app icon: " + ex.getMessage());
+            }
 
             gui.setResizable(false); // TODO: Correctly resize window
 //            gui.getContentPane().addComponentListener(new ComponentAdapter() {
