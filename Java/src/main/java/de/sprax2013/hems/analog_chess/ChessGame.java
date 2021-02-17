@@ -1,13 +1,15 @@
 package de.sprax2013.hems.analog_chess;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ChessGame {
-    //    public final List<ChessMove> moves = new ArrayList<>(100);
-    final ActiveChessman[] cachedBoard = new ActiveChessman[8 * 8];
+    public static final boolean DEBUG_IGNORE_TURNS = false;
+    public static final int BOARD_SIZE = 8 * 8;
 
+    private final ActiveChessman[] board = new ActiveChessman[BOARD_SIZE];
     private boolean whitesTurn = true;
 
     public ChessGame() {
@@ -20,49 +22,128 @@ public class ChessGame {
 
             int boardI = y * 8;
 
-            this.cachedBoard[boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.QUEEN, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KING, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
+            this.board[boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.QUEEN, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KING, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
 
             for (int j = 0; j < 8; j++) {
-                this.cachedBoard[j + yPawns * 8] = new ActiveChessman(Chessman.PAWN, whiteMoving);
+                this.board[j + yPawns * 8] = new ActiveChessman(Chessman.PAWN, whiteMoving);
             }
         }
+    }
+
+    public ActiveChessman getChessmanAt(int index) {
+        return this.board[index];
     }
 
     public boolean isWhitesTurn() {
         return this.whitesTurn;
     }
 
-    public void moveChessman(boolean whiteMoving, int chessmanIndex, int chessmanTargetIndex) {
-        ActiveChessman chessmen = getCachedChessman(chessmanIndex);
-
-        if (this.whitesTurn != whiteMoving) {
-            throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move a chessman during the opponent's turn");
-        } else if (chessmen == null) {
-            throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move a non-existing chessman");
-        } else if (chessmen.whitesChessman != whiteMoving) {
-            throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move an opposing chessman");
-        } else if (!isValidMove(chessmanIndex, chessmanTargetIndex)) {
-            throw new IllegalArgumentException("The Chessman (" + chessmen.type + ") at ( " + chessmanIndex +
-                    " ) to ( " + chessmanTargetIndex + " ) tried to make an illegal move");
+    public void moveChessman(int chessmanIndex, int chessmanTargetIndex) {
+        if (chessmanIndex == chessmanTargetIndex) {
+            throw new IllegalArgumentException("Tried to move a chessman to the location it's currently on");
+        } else if (this.board[chessmanTargetIndex] != null && this.board[chessmanTargetIndex].type == Chessman.KING) {
+            throw new IllegalArgumentException("Tried attacking a " + Chessman.KING);
         }
 
-        cachedBoard[chessmanIndex] = null;
-        cachedBoard[chessmanTargetIndex] = chessmen;
+        ActiveChessman chessman = this.board[chessmanIndex];
+        MoveType moveType = getPossibleMoves(chessmanIndex).get(chessmanTargetIndex);
+
+        if (chessman == null) {
+            throw new IllegalArgumentException((this.whitesTurn ? "White" : "Black") + " tried to move a non-existing chessman");
+        } else if (!DEBUG_IGNORE_TURNS && chessman.whitesChessman != this.whitesTurn) {
+            throw new IllegalArgumentException((this.whitesTurn ? "White" : "Black") + " tried to move an opposing chessman");
+        } else if (moveType == null) {
+            throw new IllegalArgumentException(chessman.type + " tried to make an illegal move (" + chessmanIndex + " -> " + chessmanTargetIndex + ")");
+        }
+
+        if (moveType == MoveType.CASTLING) {
+            if (chessmanIndex < chessmanTargetIndex) {
+                board[chessmanIndex + 1] = board[chessmanTargetIndex + 1];
+                board[chessmanTargetIndex + 1] = null;
+            } else {
+                board[chessmanIndex - 2] = board[chessmanTargetIndex - 1];
+                board[chessmanTargetIndex - 1] = null;
+            }
+        } else if (moveType == MoveType.EN_PASSANT) {
+            // FIXME: Does not work correctly for a black pawn
+
+            int v = this.whitesTurn ? 1 : -1;
+
+            if (Math.abs(chessmanTargetIndex - chessmanIndex) == 7) {
+                board[chessmanIndex + v] = null;
+            } else {
+                board[chessmanIndex - v] = null;
+            }
+        } else if (moveType == MoveType.PROMOTION) {
+            chessman = new ActiveChessman(Chessman.QUEEN, chessman.whitesChessman);
+        } else if (moveType == MoveType.UNDER_PROMOTION) {
+            chessman = new ActiveChessman(Chessman.KNIGHT, chessman.whitesChessman);
+        }
+
+        if (chessman.type == Chessman.PAWN) {
+            chessman.setDoublePawnMove(moveType == MoveType.PAWN_DOUBLE_MOVE);
+        }
+
+        board[chessmanIndex] = null;
+        board[chessmanTargetIndex] = chessman;
 
         // TODO: Write to this.moves
-        chessmen.setMoved();
-        this.whitesTurn = !this.whitesTurn;
+        chessman.setMoved();
+
+        if (!DEBUG_IGNORE_TURNS) {
+            this.whitesTurn = !this.whitesTurn;
+        }
+
+        // TODO: Check if any of the kings is being threatened and add checks that you can't make a move
+        //  that results in your own king to be threatened
+        //  check if the threatened king can make a move or the game is over
+    }
+
+    public int getKingIndex(boolean whitesKing) {
+        for (int i = 0; i < this.board.length; ++i) {
+            ActiveChessman chessman = this.board[i];
+
+            if (chessman != null && chessman.whitesChessman == whitesKing && chessman.type == Chessman.KING) {
+                return i;
+            }
+        }
+
+        throw new IllegalStateException("No " + Chessman.KING + " could be found for " + (whitesKing ? "white" : "black"));
+    }
+
+    public int getKingInCheck() {
+        for (int i = 0; i < 2; ++i) {
+            int kingIndex = getKingIndex(i == 0);
+
+            if (getFirstThreateningChessman(kingIndex) != -1) {
+                return kingIndex;
+            }
+        }
+
+        return -1;
+    }
+
+    public int getFirstThreateningChessman(int index) {
+        for (int i = 0; i < this.board.length; ++i) {
+            ActiveChessman chessman = this.board[i];
+
+            if (chessman != null && getPossibleMoves(i).containsKey(index)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public Map<Integer, MoveType> getPossibleMoves(int index) {
-        Map<Integer, MoveType> result = new TreeMap<>();
+        Map<Integer, MoveType> result = new LinkedHashMap<>();
 
         ActiveChessman chessman = Objects.requireNonNull(getCachedChessman(index));
 
@@ -71,7 +152,10 @@ public class ChessGame {
 
         // TODO: Put each chessman into own method
 
+        AtomicReference<MoveType> forceQueen = new AtomicReference<>();
         Runnable bishop = () -> {
+            final MoveType forcedMoveType = forceQueen.get();
+
             int tX = x;
             int tY = y;
 
@@ -84,12 +168,12 @@ public class ChessGame {
 
                 if (isOccupied(tX, tY)) {
                     if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {   // occupied by enemy
-                        result.put(tX + (tY * 8), MoveType.ATTACK);
+                        result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                     }
 
                     break;
                 } else {
-                    result.put(tX + (tY * 8), MoveType.NORMAL);
+                    result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
                 }
             }
 
@@ -103,7 +187,7 @@ public class ChessGame {
 
                 if (isOccupied(tX, tY)) {
                     if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {   // occupied by enemy
-                        result.put(tX + (tY * 8), MoveType.ATTACK);
+                        result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                     }
 
                     break;
@@ -151,7 +235,60 @@ public class ChessGame {
             }
         };
 
+        AtomicReference<MoveType> forceKnight = new AtomicReference<>();
+        Runnable knight = () -> {
+            final MoveType forcedMoveType = forceKnight.get();
+
+            int tX = x + 1;
+            int tY = y + 2;
+
+            // TODO: cleanup
+
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tX = x - 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tY = y - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put((x - 1) + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tX = x + 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put((x + 1) + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tX = x + 2;
+            tY = y + 1;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tX = x - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tY = y - 1;
+            tX = x + 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+
+            tX = x - 2;
+            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
+                result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+            }
+        };
+
         Runnable rook = () -> {
+            final MoveType forcedMoveType = forceQueen.get();
+
             int tX = x;
             int tY = y;
 
@@ -162,10 +299,10 @@ public class ChessGame {
 
                 if (!isOutOfBounds(tX, tY)) {
                     if (!isOccupied(tX, tY)) {
-                        result.put(tX + (tY * 8), MoveType.NORMAL);
+                        result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
                     } else {
                         if (isOccupiedBy(tX + (tY * 8), !chessman.whitesChessman)) {   // occupied by enemy
-                            result.put(tX + (tY * 8), MoveType.ATTACK);
+                            result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                         }
 
                         if (!mode) break;
@@ -185,10 +322,10 @@ public class ChessGame {
 
                 if (!isOutOfBounds(tX, tY)) {
                     if (!isOccupied(tX, tY)) {
-                        result.put(tX + (tY * 8), MoveType.NORMAL);
+                        result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
                     } else {
                         if (isOccupiedBy(tX + (tY * 8), !chessman.whitesChessman)) {   // occupied by enemy
-                            result.put(tX + (tY * 8), MoveType.ATTACK);
+                            result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                         }
 
                         if (!mode) break;
@@ -201,126 +338,118 @@ public class ChessGame {
             }
         };
 
-        if (chessman.type == Chessman.PAWN) {
-            int field = index + (chessman.whitesChessman ? -8 : 8);
+        switch (chessman.type) {
+            case PAWN:
+                int field = index + (chessman.whitesChessman ? -8 : 8);
 
-            if (!isOccupied(field)) {
-                result.put(field, MoveType.NORMAL);
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
+                    result.put(field, MoveType.NORMAL);
 
-                if (!chessman.hasMovedAtLeasOnce()) {
-                    field = index + (chessman.whitesChessman ? -16 : 16);
-
-                    if (!isOccupied(field)) {
-                        result.put(field, MoveType.NORMAL);
-                    }
-                }
-            }
-
-            field = index + (chessman.whitesChessman ? -7 : 7);
-            if (isOccupiedBy(field, !chessman.whitesChessman)) {
-                result.put(field, MoveType.ATTACK);
-            }
-
-            field = index + (chessman.whitesChessman ? -9 : 9);
-            if (isOccupiedBy(field, !chessman.whitesChessman)) {
-                result.put(field, MoveType.ATTACK);
-            }
-
-            // TODO: en passant
-        } else if (chessman.type == Chessman.KNIGHT) {
-            int tX = x + 1;
-            int tY = y + 2;
-
-            // TODO: cleanup
-
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-
-            tX = x - 1;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-
-            tY = y - 2;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put((x - 1) + (tY * 8), MoveType.NORMAL);
-            }
-
-            tX = x + 1;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put((x + 1) + (tY * 8), MoveType.NORMAL);
-            }
-
-            tX = x + 2;
-            tY = y + 1;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-
-            tX = x - 2;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-
-            tY = y - 1;
-            tX = x + 2;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-
-            tX = x - 2;
-            if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
-                result.put(tX + (tY * 8), MoveType.NORMAL);
-            }
-        } else if (chessman.type == Chessman.BISHOP) {
-            bishop.run();
-        } else if (chessman.type == Chessman.ROOK) {
-            rook.run();
-        } else if (chessman.type == Chessman.QUEEN) {
-            bishop.run();
-            rook.run();
-        } else if (chessman.type == Chessman.KING) {
-            int[] toCheck = new int[] {
-                    index + 1, index - 1,   // left, right
-                    index + 8, index - 8,   // above, below
-                    index + 7, index - 7,   // diagonally
-                    index + 9, index - 9};  // diagonally
-
-            for (int i : toCheck) {
-                if (!isOutOfBounds(i)) {
-                    if (isOccupied(i)) {
-                        if (isOccupiedBy(i, !chessman.whitesChessman)) {   // occupied by enemy
-                            result.put(i, MoveType.ATTACK);
+                    if (!chessman.hasMovedAtLeasOnce()) {
+                        field = index + (chessman.whitesChessman ? -16 : 16);
+                        if (!isOccupied(field)) {
+                            result.put(field, MoveType.PAWN_DOUBLE_MOVE);
                         }
-                    } else {
-                        result.put(i, MoveType.NORMAL);
                     }
                 }
-            }
-        } else {
-            throw new RuntimeException("Not implemented");
+
+                field = index + (chessman.whitesChessman ? -7 : 7);
+                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
+                    result.put(field, MoveType.ATTACK);
+                }
+
+                field = index + (chessman.whitesChessman ? -9 : 9);
+                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
+                    result.put(field, MoveType.ATTACK);
+                }
+
+                field = index + (chessman.whitesChessman ? -7 : 9);
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
+                    if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
+                        result.put(field, MoveType.EN_PASSANT);
+                    }
+                }
+                field = index + (chessman.whitesChessman ? -9 : 7);
+                if (!isOutOfBounds(field) && !isOccupied(field)) {
+                    if (isOccupiedBy(index - 1, !chessman.whitesChessman) && getCachedChessman(index - 1).hasDoublePawnMove()) {
+                        result.put(field, MoveType.EN_PASSANT);
+                    }
+                }
+
+                if (y == 0 || y == 7) {
+                    forceKnight.set(MoveType.UNDER_PROMOTION);
+                    knight.run();
+
+                    forceQueen.set(MoveType.PROMOTION);
+                    bishop.run();
+                    rook.run();
+                }
+
+                break;
+            case KNIGHT:
+                knight.run();
+
+                break;
+            case BISHOP:
+                bishop.run();
+
+                break;
+            case ROOK:
+                rook.run();
+
+                break;
+            case QUEEN:
+                bishop.run();
+                rook.run();
+
+                break;
+            case KING:
+                int[] toCheck = new int[] {
+                        index + 1, index - 1,   // left, right
+                        index + 8, index - 8,   // above, below
+                        index + 7, index - 7,   // diagonally
+                        index + 9, index - 9};  // diagonally
+
+                // TODO: Check if moving to close to enemy king
+                if (!chessman.hasMovedAtLeasOnce() &&
+                        !isOccupied(index + 1) &&
+                        !getCachedChessman(index + 3).hasMovedAtLeasOnce()) {
+                    result.put(index + 2, MoveType.CASTLING);
+                }
+                if (!chessman.hasMovedAtLeasOnce() &&
+                        !isOccupied(index - 1) &&
+                        !isOccupied(index - 2) &&
+                        !isOccupied(index - 3) &&
+                        !getCachedChessman(index - 4).hasMovedAtLeasOnce()) {
+                    result.put(index - 3, MoveType.CASTLING);
+                }
+
+                for (int i : toCheck) {
+                    if (!isOutOfBounds(i)) {
+                        if (isOccupied(i)) {
+                            if (isOccupiedBy(i, !chessman.whitesChessman)) {   // occupied by enemy
+                                result.put(i, MoveType.ATTACK);
+                            }
+                        } else {
+                            result.put(i, MoveType.NORMAL);
+                        }
+                    }
+                }
+
+                break;
+            default:
+                throw new RuntimeException("Not implemented");
         }
 
         return result;
     }
 
-    public boolean isValidMove(int field, int targetField) {
-        if (field == targetField) {
-            throw new IllegalArgumentException("Tried to move a chessman to the location it's currently on");
-        } else if (getCachedChessman(targetField) != null && getCachedChessman(targetField).type == Chessman.KING) {
-            throw new IllegalArgumentException("Tried to move a chessman onto an king");
-        }
-
-        return getPossibleMoves(field).containsKey(targetField);
-    }
-
     ActiveChessman getCachedChessman(int field) {
-        return this.cachedBoard[field];
+        return this.board[field];
     }
 
     private boolean isOccupied(int field) {
-        return this.cachedBoard[field] != null;
+        return this.board[field] != null;
     }
 
     private boolean isOccupied(int x, int y) {
@@ -328,7 +457,7 @@ public class ChessGame {
     }
 
     private boolean isOccupiedBy(int field, boolean whiteChessman) {
-        ActiveChessman chessman = this.cachedBoard[field];
+        ActiveChessman chessman = this.board[field];
 
         return chessman != null && chessman.whitesChessman == whiteChessman;
     }
@@ -344,26 +473,4 @@ public class ChessGame {
     private boolean isOutOfBounds(int x, int y) {
         return x < 0 || x > 7 || y < 0 || y > 7;
     }
-
-//    public void printCachedBoard() {
-//        System.out.print(' ');
-//        for (int i = 0; i < cachedBoard.length + 2; i++) {
-//            System.out.print('─');
-//        }
-//        System.out.println();
-//
-//                ActiveChessman chessman = activeChessmen[j];
-//
-//                if (chessman == null) {
-//                    System.out.print(' ');
-//                } else {
-//                    System.out.print(chessman.whitesChessman ? chessman.type.charWhite : chessman.type.charBlack);
-//                }
-//
-//        System.out.print(' ');
-//        for (int i = 0; i < cachedBoard.length + 2; i++) {
-//            System.out.print('─');
-//        }
-//        System.out.println();
-//    }
 }

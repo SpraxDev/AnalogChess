@@ -16,16 +16,16 @@ public enum Chessman {
     public final char charWhite;
     public final char charBlack;
 
-    public final char notation;
+    public final char notationDE;
 
     private BufferedImage imgWhite;
     private BufferedImage imgBlack;
 
-    Chessman(char charWhite, char charBlack, char notation) {
+    Chessman(char charWhite, char charBlack, char notationDE) {
         this.charWhite = charWhite;
         this.charBlack = charBlack;
 
-        this.notation = notation;
+        this.notationDE = notationDE;
     }
 
     public BufferedImage getWhiteImage() throws IOException {
