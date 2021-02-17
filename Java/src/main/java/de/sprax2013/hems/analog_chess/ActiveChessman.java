@@ -21,9 +21,10 @@ public class ActiveChessman {
         return this.movedAtLeastOnce;
     }
 
-    public boolean hasDoublePawnMove(){
+    public boolean hasDoublePawnMove() {
         return this.doublePawnMove;
     }
+
     public void setMoved() {
         this.movedAtLeastOnce = true;
     }

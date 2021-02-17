@@ -5,8 +5,10 @@ import java.util.Map;
 import java.util.Objects;
 
 public class ChessGame {
+    public static final boolean DEBUG_IGNORE_TURNS = false;
+
     //    public final List<ChessMove> moves = new ArrayList<>(100);
-    final ActiveChessman[] cachedBoard = new ActiveChessman[8 * 8];
+    final ActiveChessman[] board = new ActiveChessman[8 * 8];
 
     private boolean whitesTurn = true;
 
@@ -20,17 +22,17 @@ public class ChessGame {
 
             int boardI = y * 8;
 
-            this.cachedBoard[boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.QUEEN, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KING, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
-            this.cachedBoard[++boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
+            this.board[boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.QUEEN, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KING, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.BISHOP, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.KNIGHT, whiteMoving);
+            this.board[++boardI] = new ActiveChessman(Chessman.ROOK, whiteMoving);
 
             for (int j = 0; j < 8; j++) {
-                this.cachedBoard[j + yPawns * 8] = new ActiveChessman(Chessman.PAWN, whiteMoving);
+                this.board[j + yPawns * 8] = new ActiveChessman(Chessman.PAWN, whiteMoving);
             }
         }
     }
@@ -40,48 +42,58 @@ public class ChessGame {
     }
 
     public void moveChessman(boolean whiteMoving, int chessmanIndex, int chessmanTargetIndex) {
-        ActiveChessman chessmen = getCachedChessman(chessmanIndex);
-
-        if (this.whitesTurn != whiteMoving) {
+        if (!DEBUG_IGNORE_TURNS && this.whitesTurn != whiteMoving) {
             throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move a chessman during the opponent's turn");
-        } else if (chessmen == null) {
+        } else if (chessmanIndex == chessmanTargetIndex) {
+            throw new IllegalArgumentException("Tried to move a chessman to the location it's currently on");
+        } else if (this.board[chessmanTargetIndex] != null && this.board[chessmanTargetIndex].type == Chessman.KING) {
+            throw new IllegalArgumentException("Tried attacking a " + Chessman.KING);
+        }
+
+        ActiveChessman chessman = this.board[chessmanIndex];
+        MoveType moveType = getPossibleMoves(chessmanIndex).get(chessmanTargetIndex);
+
+        if (chessman == null) {
             throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move a non-existing chessman");
-        } else if (chessmen.whitesChessman != whiteMoving) {
+        } else if (!DEBUG_IGNORE_TURNS && chessman.whitesChessman != whiteMoving) {
             throw new IllegalArgumentException((whiteMoving ? "White" : "Black") + " tried to move an opposing chessman");
-        } else if (!isValidMove(chessmanIndex, chessmanTargetIndex)) {
-            throw new IllegalArgumentException("The Chessman (" + chessmen.type + ") at ( " + chessmanIndex +
-                    " ) to ( " + chessmanTargetIndex + " ) tried to make an illegal move");
+        } else if (moveType == null) {
+            throw new IllegalArgumentException(chessman.type + " tried to make an illegal move (" + chessmanIndex + " -> " + chessmanTargetIndex + ")");
         }
-        if (getPossibleMoves(chessmanIndex).get(chessmanTargetIndex) == MoveType.CASTLING) {
+
+        if (moveType == MoveType.CASTLING) {
             if (chessmanIndex < chessmanTargetIndex) {
-                cachedBoard[chessmanIndex + 1] = cachedBoard[chessmanTargetIndex + 1];
-                cachedBoard[chessmanTargetIndex + 1] = null;
+                board[chessmanIndex + 1] = board[chessmanTargetIndex + 1];
+                board[chessmanTargetIndex + 1] = null;
             } else {
-                cachedBoard[chessmanIndex - 2] = cachedBoard[chessmanTargetIndex - 1];
-                cachedBoard[chessmanTargetIndex - 1] = null;
+                board[chessmanIndex - 2] = board[chessmanTargetIndex - 1];
+                board[chessmanTargetIndex - 1] = null;
             }
-        }
-        if (getPossibleMoves(chessmanIndex).get(chessmanTargetIndex) == MoveType.EN_PASSANT) {
+        } else if (moveType == MoveType.EN_PASSANT) {
+            // FIXME: Does not work correctly for a black pawn
+
             int v = whiteMoving ? 1 : -1;
 
             if (Math.abs(chessmanTargetIndex - chessmanIndex) == 7) {
-                cachedBoard[chessmanIndex + v] = null;
+                board[chessmanIndex + v] = null;
             } else {
-                cachedBoard[chessmanIndex - v] = null;
+                board[chessmanIndex - v] = null;
             }
         }
 
-        if (chessmen.type == Chessman.PAWN && Math.abs(chessmanIndex - chessmanTargetIndex) == 16) {
-            chessmen.setDoublePawnMove(true);
-        } else {
-            chessmen.setDoublePawnMove(false);
+        if (chessman.type == Chessman.PAWN) {
+            chessman.setDoublePawnMove(moveType == MoveType.PAWN_DOUBLE_MOVE);
         }
-        cachedBoard[chessmanIndex] = null;
-        cachedBoard[chessmanTargetIndex] = chessmen;
+
+        board[chessmanIndex] = null;
+        board[chessmanTargetIndex] = chessman;
 
         // TODO: Write to this.moves
-        chessmen.setMoved();
-        this.whitesTurn = !this.whitesTurn;
+        chessman.setMoved();
+
+        if (!DEBUG_IGNORE_TURNS) {
+            this.whitesTurn = !this.whitesTurn;
+        }
 
         // TODO: Check if any of the kings is being threatened and add checks that you can't make a move
         //  that results in your own king to be threatened
@@ -90,8 +102,8 @@ public class ChessGame {
     }
 
     public int getThreateningChessman(int index) {
-        for (int i = 0; i < this.cachedBoard.length; i++) {
-            ActiveChessman ac = this.cachedBoard[i];
+        for (int i = 0; i < this.board.length; i++) {
+            ActiveChessman ac = this.board[i];
 
             if (ac != null && getPossibleMoves(i).containsKey(index)) {
                 return i;
@@ -244,13 +256,14 @@ public class ChessGame {
         switch (chessman.type) {
             case PAWN:
                 int field = index + (chessman.whitesChessman ? -8 : 8);
+
                 if (!isOutOfBounds(field) && !isOccupied(field)) {
                     result.put(field, MoveType.NORMAL);
 
                     if (!chessman.hasMovedAtLeasOnce()) {
                         field = index + (chessman.whitesChessman ? -16 : 16);
                         if (!isOccupied(field)) {
-                            result.put(field, MoveType.NORMAL);
+                            result.put(field, MoveType.PAWN_DOUBLE_MOVE);
                         }
                     }
                 }
@@ -264,6 +277,7 @@ public class ChessGame {
                 if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
                     result.put(field, MoveType.ATTACK);
                 }
+
                 field = index + (chessman.whitesChessman ? -7 : 9);
                 if (!isOutOfBounds(field) && !isOccupied(field)) {
                     if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
@@ -369,22 +383,12 @@ public class ChessGame {
         return result;
     }
 
-    public boolean isValidMove(int field, int targetField) {
-        if (field == targetField) {
-            throw new IllegalArgumentException("Tried to move a chessman to the location it's currently on");
-        } else if (getCachedChessman(targetField) != null && getCachedChessman(targetField).type == Chessman.KING) {
-            throw new IllegalArgumentException("Tried to move a chessman onto an king");
-        }
-
-        return getPossibleMoves(field).containsKey(targetField);
-    }
-
     ActiveChessman getCachedChessman(int field) {
-        return this.cachedBoard[field];
+        return this.board[field];
     }
 
     private boolean isOccupied(int field) {
-        return this.cachedBoard[field] != null;
+        return this.board[field] != null;
     }
 
     private boolean isOccupied(int x, int y) {
@@ -392,7 +396,7 @@ public class ChessGame {
     }
 
     private boolean isOccupiedBy(int field, boolean whiteChessman) {
-        ActiveChessman chessman = this.cachedBoard[field];
+        ActiveChessman chessman = this.board[field];
 
         return chessman != null && chessman.whitesChessman == whiteChessman;
     }

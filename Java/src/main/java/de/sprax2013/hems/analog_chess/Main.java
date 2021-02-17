@@ -57,7 +57,7 @@ public class Main {
                 public void mousePressed(MouseEvent e) {
                     ActiveChessman chessman = game.getCachedChessman(finalI);
 
-                    if (chessman != null && chessman.whitesChessman == game.isWhitesTurn()) {
+                    if (chessman != null && (ChessGame.DEBUG_IGNORE_TURNS || chessman.whitesChessman == game.isWhitesTurn())) {
                         highlightedFields = game.getPossibleMoves(finalI);
                     } else {
                         highlightedFields = Collections.emptyMap();
@@ -85,11 +85,15 @@ public class Main {
                     if (finalI != targetI) {
                         ActiveChessman chessman = game.getCachedChessman(finalI);
 
-                        if (chessman != null && chessman.whitesChessman == game.isWhitesTurn()) {
-                            game.moveChessman(game.isWhitesTurn(), finalI, targetI);
+                        if (chessman != null && (ChessGame.DEBUG_IGNORE_TURNS || chessman.whitesChessman == game.isWhitesTurn())) {
+                            try {
+                                game.moveChessman(game.isWhitesTurn(), finalI, targetI);
 
-                            highlightedFields = Collections.emptyMap();
-                            updateGui();
+                                highlightedFields = Collections.emptyMap();
+                                updateGui();
+                            } catch (IllegalArgumentException ex) {
+                                System.err.println(ex.getMessage());
+                            }
                         }
                     }
                 }
