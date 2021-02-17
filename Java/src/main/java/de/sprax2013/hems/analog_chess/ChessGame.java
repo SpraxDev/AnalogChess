@@ -411,10 +411,16 @@ public class ChessGame {
                         index + 9, index - 9};  // diagonally
 
                 // TODO: Check if moving to close to enemy king
-                if (!chessman.hasMovedAtLeasOnce() && !isOccupied(index + 1) && !isOccupied(index + 1) && !getCachedChessman(index + 3).hasMovedAtLeasOnce()) {
+                if (!chessman.hasMovedAtLeasOnce() &&
+                        !isOccupied(index + 1) &&
+                        !getCachedChessman(index + 3).hasMovedAtLeasOnce()) {
                     result.put(index + 2, MoveType.CASTLING);
                 }
-                if (!chessman.hasMovedAtLeasOnce() && !isOccupied(index - 1) && !isOccupied(index - 2) && !isOccupied(index - 3) && !getCachedChessman(index - 4).hasMovedAtLeasOnce()) {
+                if (!chessman.hasMovedAtLeasOnce() &&
+                        !isOccupied(index - 1) &&
+                        !isOccupied(index - 2) &&
+                        !isOccupied(index - 3) &&
+                        !getCachedChessman(index - 4).hasMovedAtLeasOnce()) {
                     result.put(index - 3, MoveType.CASTLING);
                 }
 

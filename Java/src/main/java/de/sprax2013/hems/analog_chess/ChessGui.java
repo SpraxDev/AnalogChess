@@ -6,6 +6,7 @@ import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -51,19 +52,19 @@ public class ChessGui {
         this.fieldPanels = new JPanel[ChessGame.BOARD_SIZE];
 
         SwingUtilities.invokeLater(() -> {
-            JFrame gui = new JFrame("Schach");
+            JFrame frame = new JFrame("Schach");
 
-            gui.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            gui.setSize(75 * 8, 75 * 8);
-            gui.getContentPane().setLayout(new GridLayout(8, 8));
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            frame.setResizable(false); // TODO: Correctly resize window
+            frame.setSize(75 * 8, 75 * 8);
+            frame.getContentPane().setLayout(new GridLayout(8, 8));
 
             try {
-                gui.setIconImage(Chessman.KING.getBlackImage());
+                frame.setIconImage(Chessman.KING.getBlackImage());
             } catch (IOException ex) {
                 System.err.println("Error setting app icon: " + ex.getMessage());
             }
 
-            gui.setResizable(false); // TODO: Correctly resize window
 //            gui.getContentPane().addComponentListener(new ComponentAdapter() {
 //                public void componentResized(ComponentEvent e) {
 //                    int size = Math.min(gui.getWidth(), gui.getHeight());
@@ -80,7 +81,7 @@ public class ChessGui {
 
                 JPanel panel = new JPanel();
                 this.fieldPanels[i] = panel;
-                gui.getContentPane().add(panel);
+                frame.getContentPane().add(panel);
 
                 panel.setBackground(b ? WHITE_FIELD : BLACK_FIELD);
 
@@ -117,10 +118,10 @@ public class ChessGui {
                 b = !b;
             }
 
-            this.gui = gui;
+            this.gui = frame;
 
             update();
-            gui.setVisible(true);
+            frame.setVisible(true);
         });
     }
 
@@ -188,7 +189,7 @@ public class ChessGui {
                         try {
                             label.setIcon(new ImageIcon(chessman.whitesChessman ? chessman.type.getWhiteImage() : chessman.type.getBlackImage()));
                         } catch (IOException ex) {
-                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(this.gui, "Error updating chessman (" + chessman.type + ") image: " + ex.getMessage(), "An error occured", JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 }
