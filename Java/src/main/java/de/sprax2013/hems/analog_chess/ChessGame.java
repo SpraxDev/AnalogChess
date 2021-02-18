@@ -243,6 +243,8 @@ public class ChessGame {
             int tY = y + 2;
 
             // TODO: cleanup
+            // TODO: Abfrage ob Figur auf Feld -> ATTACK Move
+
 
             if (!isOutOfBounds(tX, tY) && !isOccupiedBy(tX, tY, chessman.whitesChessman)) {
                 result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
