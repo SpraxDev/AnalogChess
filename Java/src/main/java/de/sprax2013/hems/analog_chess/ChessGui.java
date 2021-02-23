@@ -36,6 +36,8 @@ public class ChessGui {
 
     private static final Border SPECIAL_MOVE_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
             BorderFactory.createLineBorder(Color.YELLOW, 2, false));
+    private static final Border PROMOTION_MOVE_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
+            BorderFactory.createLineBorder(Color.PINK, 2, false));
     private static final Border UNDER_PROMOTION_MOVE_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
             BorderFactory.createLineBorder(Color.CYAN, 2, false));
 
@@ -144,10 +146,14 @@ public class ChessGui {
                         if (moveType != null) {
                             switch (moveType) {
                                 case NORMAL:
+                                case PAWN_DOUBLE_MOVE:
                                     border = NORMAL_MOVE_BORDER;
                                     break;
                                 case ATTACK:
                                     border = ATTACK_MOVE_BORDER;
+                                    break;
+                                case PROMOTION:
+                                    border = PROMOTION_MOVE_BORDER;
                                     break;
                                 case UNDER_PROMOTION:
                                     border = UNDER_PROMOTION_MOVE_BORDER;
