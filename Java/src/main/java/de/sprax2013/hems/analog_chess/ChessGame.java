@@ -179,8 +179,11 @@ public class ChessGame {
 
                     if (isOutOfBounds(tX, tY)) break;
 
-                    if (!isOccupied(tX, tY)) {
+                    if (isOccupiedBy(tX,tY,chessman.whitesChessman)){
+                        break;
+                    } if (!isOccupied(tX,tY)) {
                         result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
+
                     } else if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {
                         result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                         break;
