@@ -1,5 +1,6 @@
 package de.sprax2013.hems.analog_chess;
 
+import java.awt.Point;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -156,7 +157,6 @@ public class ChessGame {
         Runnable bishop = () -> {
             final MoveType forcedMoveType = forceQueen.get();
 
-
             for (int i = 1; i <= 4; i++) {
                 int tX = x;
                 int tY = y;
@@ -179,16 +179,15 @@ public class ChessGame {
 
                     if (isOutOfBounds(tX, tY)) break;
 
-                    if (isOccupiedBy(tX,tY,chessman.whitesChessman)){
+                    if (isOccupiedBy(tX, tY, chessman.whitesChessman)) {
                         break;
-                    } if (!isOccupied(tX,tY)) {
+                    }
+                    if (!isOccupied(tX, tY)) {
                         result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.NORMAL : forcedMoveType);
-
                     } else if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {
                         result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                         break;
                     }
-
                 }
             }
         };
@@ -213,7 +212,6 @@ public class ChessGame {
 
                         tX = x + diffX;
                         tY = y + diffY;
-
                     } else {
                         int diffX = i >= 2 ? -2 : -1;
                         int diffY = i >= 2 ? 1 : 2;
@@ -221,7 +219,6 @@ public class ChessGame {
                         if (j == 1) {
                             diffX = -diffX;
                             diffY = -diffY;
-
                         }
 
                         tX = x + diffX;
@@ -234,7 +231,6 @@ public class ChessGame {
                         } else if (isOccupiedBy(tX, tY, !chessman.whitesChessman)) {
                             result.put(tX + (tY * 8), forcedMoveType == null ? MoveType.ATTACK : forcedMoveType);
                         }
-
                     }
                 }
             }
@@ -358,13 +354,13 @@ public class ChessGame {
 
                 break;
             case KING:
-                int[] toCheck = new int[]{
-                        index + 1, index - 1,   // left, right
-                        index + 8, index - 8,   // above, below
-                        index + 7, index - 7,   // diagonally
-                        index + 9, index - 9};  // diagonally
+                Point[] toCheck = new Point[] {
+                        new Point(x + 1, y), new Point(x - 1, y),   // left, right
+                        new Point(x, y + 1), new Point(x, y - 1),   // above, below
+                        new Point(x + 1, y + 1), new Point(x - 1, y + 1),   // diagonally
+                        new Point(x + 1, y - 1), new Point(x - 1, y - 1),   // diagonally
+                };
 
-                // TODO: Check if moving to close to enemy king
                 if (!chessman.hasMovedAtLeasOnce() &&
                         !isOccupied(index + 1) &&
                         !getCachedChessman(index + 3).hasMovedAtLeasOnce()) {
@@ -374,18 +370,19 @@ public class ChessGame {
                         !isOccupied(index - 1) &&
                         !isOccupied(index - 2) &&
                         !isOccupied(index - 3) &&
+                        getCachedChessman(index - 4) != null &&
                         !getCachedChessman(index - 4).hasMovedAtLeasOnce()) {
                     result.put(index - 3, MoveType.CASTLING);
                 }
 
-                for (int i : toCheck) {
-                    if (!isOutOfBounds(i)) {
-                        if (isOccupied(i)) {
-                            if (isOccupiedBy(i, !chessman.whitesChessman)) {   // occupied by enemy
-                                result.put(i, MoveType.ATTACK);
+                for (Point p : toCheck) {
+                    if (!isOutOfBounds(p.x, p.y)) {
+                        if (isOccupied(p.x, p.y)) {
+                            if (isOccupiedBy(p.x, p.y, !chessman.whitesChessman)) {   // occupied by enemy
+                                result.put(p.x + (p.y * 8), MoveType.ATTACK);
                             }
                         } else {
-                            result.put(i, MoveType.NORMAL);
+                            result.put(p.x + (p.y * 8), MoveType.NORMAL);
                         }
                     }
                 }
