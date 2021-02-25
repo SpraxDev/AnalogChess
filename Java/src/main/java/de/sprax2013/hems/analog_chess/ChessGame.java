@@ -1,6 +1,6 @@
 package de.sprax2013.hems.analog_chess;
 
-import java.awt.Point;
+import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +14,7 @@ public class ChessGame {
     private boolean whitesTurn = true;
 
     private int counter = 0;
+
     public ChessGame() {
         // Set default positions
         for (int i = 0; i < 2; i++) {
@@ -322,10 +323,10 @@ public class ChessGame {
                     tY = y;
 
 
-                    if (!isOutOfBounds(tX, tY+yOffsetPawn) && !isOccupied(tX,tY+yOffsetPawn))
-                    if (isOccupiedBy(tX, tY, !chessman.whitesChessman) && getCachedChessman(tX,tY).hasDoublePawnMove() && getCachedChessman(tX,tY).getLastCounter()==counter-1){
-                        result.put(tX + ((tY+yOffsetPawn) * 8), MoveType.EN_PASSANT);
-                    }
+                    if (!isOutOfBounds(tX, tY + yOffsetPawn) && !isOccupied(tX, tY + yOffsetPawn))
+                        if (isOccupiedBy(tX, tY, !chessman.whitesChessman) && getCachedChessman(tX, tY).hasDoublePawnMove() && getCachedChessman(tX, tY).getLastCounter() == counter - 1) {
+                            result.put(tX + ((tY + yOffsetPawn) * 8), MoveType.EN_PASSANT);
+                        }
                 }
 
                 if (y == 0 || y == 7) {
@@ -356,7 +357,7 @@ public class ChessGame {
 
                 break;
             case KING:
-                Point[] toCheck = new Point[] {
+                Point[] toCheck = new Point[]{
                         new Point(x + 1, y), new Point(x - 1, y),   // left, right
                         new Point(x, y + 1), new Point(x, y - 1),   // above, below
                         new Point(x + 1, y + 1), new Point(x - 1, y + 1),   // diagonally
@@ -401,8 +402,8 @@ public class ChessGame {
         return this.board[field];
     }
 
-    ActiveChessman getCachedChessman(int x,int y) {
-        return getCachedChessman(x + (y*8));
+    ActiveChessman getCachedChessman(int x, int y) {
+        return getCachedChessman(x + (y * 8));
     }
 
     private boolean isOccupied(int field) {
