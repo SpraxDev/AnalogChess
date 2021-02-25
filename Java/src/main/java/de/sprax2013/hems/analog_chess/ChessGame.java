@@ -328,19 +328,6 @@ public class ChessGame {
                     }
                 }
 
-              /*  int tField = index + (chessman.whitesChessman ? -7 : 9);
-                if (!isOutOfBounds(tField) && !isOccupied(tField)) {
-                    if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
-                        result.put(tField, MoveType.EN_PASSANT);
-                    }
-                }
-                tField = index + (chessman.whitesChessman ? -9 : 7);
-                if (!isOutOfBounds(tField) && !isOccupied(tField)) {
-                    if (isOccupiedBy(index - 1, !chessman.whitesChessman) && getCachedChessman(index - 1).hasDoublePawnMove()) {
-                        result.put(tField, MoveType.EN_PASSANT);
-                    }
-                }
-*/
                 if (y == 0 || y == 7) {
                     forceKnight.set(MoveType.UNDER_PROMOTION);
                     knight.run();
