@@ -148,8 +148,8 @@ public class ChessGame {
 
         ActiveChessman chessman = Objects.requireNonNull(getCachedChessman(index));
 
-        int x = index % 8;
-        int y = index / 8;
+        final int x = index % 8;
+        final int y = index / 8;
 
         // TODO: Put each chessman into own method
 
@@ -290,39 +290,42 @@ public class ChessGame {
 
         switch (chessman.type) {
             case PAWN:
-                int field = index + (chessman.whitesChessman ? -8 : 8);
+                int yOffsetPawn = (chessman.whitesChessman ? -1 : 1);
 
-                if (!isOutOfBounds(field) && !isOccupied(field)) {
-                    result.put(field, MoveType.NORMAL);
+                // 1 forward
+                int tY = y + yOffsetPawn;
+                if (!isOutOfBounds(x, tY) && !isOccupied(x, tY)) {
+                    result.put(x + (tY * 8), MoveType.NORMAL);
+                }
 
-                    if (!chessman.hasMovedAtLeasOnce()) {
-                        field = index + (chessman.whitesChessman ? -16 : 16);
-                        if (!isOccupied(field)) {
-                            result.put(field, MoveType.PAWN_DOUBLE_MOVE);
-                        }
+                // double move
+                if (!chessman.hasMovedAtLeasOnce()) {
+                    tY = y + (chessman.whitesChessman ? -2 : 2);
+
+                    if (!isOutOfBounds(x, tY) && !isOccupied(x, tY)) {
+                        result.put(x + (tY * 8), MoveType.PAWN_DOUBLE_MOVE);
                     }
                 }
 
-                field = index + (chessman.whitesChessman ? -7 : 7);
-                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
-                    result.put(field, MoveType.ATTACK);
+                for (int i = 0; i < 2; ++i) {
+                    int tX = x + (i == 0 ? 1 : -1);
+                    tY = y + yOffsetPawn;
+
+                    if (!isOutOfBounds(tX, tY) && isOccupiedBy(tX, tY, !chessman.whitesChessman)) {
+                        result.put(tX + (tY * 8), MoveType.ATTACK);
+                    }
                 }
 
-                field = index + (chessman.whitesChessman ? -9 : 9);
-                if (!isOutOfBounds(field) && isOccupiedBy(field, !chessman.whitesChessman)) {
-                    result.put(field, MoveType.ATTACK);
-                }
-
-                field = index + (chessman.whitesChessman ? -7 : 9);
-                if (!isOutOfBounds(field) && !isOccupied(field)) {
+                int tField = index + (chessman.whitesChessman ? -7 : 9);
+                if (!isOutOfBounds(tField) && !isOccupied(tField)) {
                     if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
-                        result.put(field, MoveType.EN_PASSANT);
+                        result.put(tField, MoveType.EN_PASSANT);
                     }
                 }
-                field = index + (chessman.whitesChessman ? -9 : 7);
-                if (!isOutOfBounds(field) && !isOccupied(field)) {
+                tField = index + (chessman.whitesChessman ? -9 : 7);
+                if (!isOutOfBounds(tField) && !isOccupied(tField)) {
                     if (isOccupiedBy(index - 1, !chessman.whitesChessman) && getCachedChessman(index - 1).hasDoublePawnMove()) {
-                        result.put(field, MoveType.EN_PASSANT);
+                        result.put(tField, MoveType.EN_PASSANT);
                     }
                 }
 
