@@ -13,6 +13,7 @@ public class ChessGame {
     private final ActiveChessman[] board = new ActiveChessman[BOARD_SIZE];
     private boolean whitesTurn = true;
 
+    private int counter = 0;
     public ChessGame() {
         // Set default positions
         for (int i = 0; i < 2; i++) {
@@ -96,7 +97,8 @@ public class ChessGame {
         board[chessmanTargetIndex] = chessman;
 
         // TODO: Write to this.moves
-        chessman.setMoved();
+        chessman.setMoved(counter);
+        ++counter;
 
         if (!DEBUG_IGNORE_TURNS) {
             this.whitesTurn = !this.whitesTurn;
@@ -315,8 +317,18 @@ public class ChessGame {
                         result.put(tX + (tY * 8), MoveType.ATTACK);
                     }
                 }
+                for (int i = 0; i < 2; ++i) {
+                    int tX = x + (i == 0 ? 1 : -1);
+                    tY = y;
 
-                int tField = index + (chessman.whitesChessman ? -7 : 9);
+
+                    if (!isOutOfBounds(tX, tY+yOffsetPawn) && !isOccupied(tX,tY+yOffsetPawn))
+                    if (isOccupiedBy(tX, tY, !chessman.whitesChessman) && getCachedChessman(tX,tY).hasDoublePawnMove() && getCachedChessman(tX,tY).getLastCounter()==counter-1){
+                        result.put(tX + ((tY+yOffsetPawn) * 8), MoveType.EN_PASSANT);
+                    }
+                }
+
+              /*  int tField = index + (chessman.whitesChessman ? -7 : 9);
                 if (!isOutOfBounds(tField) && !isOccupied(tField)) {
                     if (isOccupiedBy(index + 1, !chessman.whitesChessman) && getCachedChessman(index + 1).hasDoublePawnMove()) {
                         result.put(tField, MoveType.EN_PASSANT);
@@ -328,7 +340,7 @@ public class ChessGame {
                         result.put(tField, MoveType.EN_PASSANT);
                     }
                 }
-
+*/
                 if (y == 0 || y == 7) {
                     forceKnight.set(MoveType.UNDER_PROMOTION);
                     knight.run();
@@ -400,6 +412,10 @@ public class ChessGame {
 
     ActiveChessman getCachedChessman(int field) {
         return this.board[field];
+    }
+
+    ActiveChessman getCachedChessman(int x,int y) {
+        return getCachedChessman(x + (y*8));
     }
 
     private boolean isOccupied(int field) {
