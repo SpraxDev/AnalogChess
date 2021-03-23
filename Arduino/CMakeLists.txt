@@ -26,7 +26,7 @@ set(${PROJECT_NAME}_SKETCH arduino.ino)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
 # For nested library sources replace ${LIB_NAME} with library name for each library
-# set(_RECURSE true)
+set(FastLED_RECURSE true)
 
 #### Additional settings for programmer. From programmers.txt
 set(${PROJECT_NAME}_PROGRAMMER avrispmkii)
