@@ -2,46 +2,60 @@ package de.sprax2013.hems.analog_chess;
 
 import com.fazecast.jSerialComm.SerialPort;
 
-import java.awt.Color;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Serial {
+    private static final boolean DEBUG = true;
+
     private SerialPort port;
     private ExecutorService thread;
     private byte[] buffer;
     private int bufferIndex;
 
+    private SerialState state;
+
     public SerialPort getPort() {
         return this.port;
     }
 
-    public void sendLedColor(int ledIndex, Color color) {
-        write("LED" + ledIndex + color.getRGB() + ((char) 4));
+//    public byte[] sendLedColor(int ledIndex, Color color) {
+//        return write("LED" + ledIndex + color.getRGB() + ((char) 4));
+//
+//        // TODO: read response
+//    }
+//
+//    public byte[] sendLedShow() {
+//        return write("LED SHOW" + ((char) 4));
+//
+//        // TODO: read response
+//    }
 
-        // TODO: read response
+    public byte[] requestBoard() {
+        return write(new byte[] {'S', 'Y', 'N', 'C', 4});
     }
 
-    public void sendLedShow() {
-        write("LED SHOW" + ((char) 4));
+    public void sendReset() {
+        if (DEBUG) System.out.println("Sending RST-Command...");
 
-        // TODO: read response
+        write(new byte[] {'R', 'S', 'T', 4});
+
+        if (DEBUG) System.out.println("Finished sending RST-Command");
     }
 
-    public void requestBoard() {
-        write("SYNC" + ((char) 4));
+    private byte[] write(byte[] data) {
+        // Wait until we are ready to write
+        while (true) {
+            if (this.state == SerialState.IDLE) break;
+        }
 
-        // TODO: read response
-    }
+        this.state = SerialState.BUSY_WRITE;
 
-    private void write(String str) {
-        byte[] data = str.getBytes(StandardCharsets.US_ASCII);
-
+        if (DEBUG) System.out.println("[Serial] Sending: " + Arrays.toString(data));
         this.port.writeBytes(data, data.length);
 
         // Block until data is sent
@@ -49,7 +63,33 @@ public class Serial {
             if (this.port.bytesAwaitingWrite() <= 0) break;
         }
 
-        // TODO: Read response data
+        this.state = SerialState.WAIT_RESPONSE;
+
+        // Wait for the reading thread to finish reading
+        while (true) {
+            //noinspection ConstantConditions
+            if (this.state == SerialState.RESPONSE_READY) break;
+        }
+
+        if (DEBUG) {
+            System.out.println("[Serial] Received " + bufferIndex + " bytes (" + Arrays.toString(Arrays.copyOf(this.buffer, bufferIndex)) + ")");
+        }
+
+        if (this.buffer[0] != 6) {
+            throw new RuntimeException("Connected serial sent unexpected first byte: " + this.buffer[0]);
+        }
+
+        // Copy result buffer to return later
+        byte[] result = bufferIndex == 0 ? new byte[0] : Arrays.copyOfRange(this.buffer, 1, bufferIndex - 1);
+
+        // Reset buffer
+        Arrays.fill(this.buffer, (byte) 0);
+        this.bufferIndex = 0;
+
+        // Reset state
+        this.state = SerialState.IDLE;
+
+        return result;
     }
 
     public void start(int baudRate) {
@@ -57,49 +97,53 @@ public class Serial {
             throw new IllegalStateException("A serial connection is already running");
         }
 
+        if (!this.port.openPort()) {
+            throw new RuntimeException("Could not open serial port");
+        }
+
+        if (!this.port.setBaudRate(baudRate)) {
+            throw new RuntimeException("Could not set BaudRate");
+        }
+
         this.port.setBaudRate(baudRate);
+        this.port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
+        this.port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
 
-        this.port.openPort();
-
-        this.buffer = new byte[8];
+        this.buffer = new byte[10];
+        this.state = SerialState.IDLE;
 
         thread = Executors.newSingleThreadExecutor();
         thread.execute(() -> {
-            try {
-                while (!Thread.interrupted()) {
-                    if (this.port.bytesAvailable() > 0) {
-                        if (bufferIndex + 1 >= buffer.length) {
-                            int newLength = buffer.length * 2;
+            while (!thread.isShutdown()) {
+                if (this.port.bytesAvailable() > 0) {
+                    if (bufferIndex + 1 > buffer.length) {
+                        int newLength = buffer.length * 2;
 
-                            if (newLength > 4096) {
-                                throw new RuntimeException("Serial buffer limit of 4096 bytes has been exceeded");
-                            }
-
-                            // TODO: Use this debug information to determine default buffer size
-                            System.out.println("[Serial] Buffer size changed (" + this.buffer.length + "->" + newLength + ")");
-
-                            buffer = Arrays.copyOf(buffer, newLength);
+                        if (newLength > 4096) {
+                            throw new RuntimeException("Serial buffer limit of 4096 bytes has been exceeded");
                         }
 
-                        this.port.readBytes(this.buffer, 1, bufferIndex);
-                        byte b = this.buffer[bufferIndex++];
+                        // Use this information to determine default buffer size
+                        System.out.println("[Serial] Buffer size changed (" + this.buffer.length + "->" + newLength + ")");
 
-                        if (b == 4) {
-                            // TODO: Do something with the data
+                        buffer = Arrays.copyOf(buffer, newLength);
+                    }
 
-                            System.out.println("[Serial] Received " + (bufferIndex + 1) + " bytes");
+                    this.port.readBytes(this.buffer, 1, bufferIndex);
+                    byte b = this.buffer[bufferIndex++];
 
-                            Arrays.fill(this.buffer, (byte) 0);
-                            this.bufferIndex = 0;
+                    if (DEBUG) System.out.println("Received byte '" + b + "'");
 
-                            break;
-                        }
+                    if (b == 4) {
+                        this.state = SerialState.RESPONSE_READY;
                     }
                 }
-            } catch (Exception ex) {
-                ex.printStackTrace();
             }
+
+            System.out.println("Terminating read-thread");
         });
+
+//        sendReset();
     }
 
     public void stop() throws InterruptedException {
@@ -107,6 +151,7 @@ public class Serial {
             thread.shutdown();
 
             if (!thread.awaitTermination(3, TimeUnit.SECONDS)) {
+                System.err.println("Forcefully shutting down serial read thread");
                 thread.shutdownNow();
             }
 
