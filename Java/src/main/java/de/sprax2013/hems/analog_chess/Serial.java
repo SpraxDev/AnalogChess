@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+// FIXME: Was a stupid idea. Implementation is okay-ish...
 public class Serial {
     private static final boolean DEBUG = true;
 
@@ -21,30 +22,6 @@ public class Serial {
 
     public SerialPort getPort() {
         return this.port;
-    }
-
-//    public byte[] sendLedColor(int ledIndex, Color color) {
-//        return write("LED" + ledIndex + color.getRGB() + ((char) 4));
-//
-//        // TODO: read response
-//    }
-//
-//    public byte[] sendLedShow() {
-//        return write("LED SHOW" + ((char) 4));
-//
-//        // TODO: read response
-//    }
-
-    public byte[] requestBoard() {
-        return write(new byte[] {'S', 'Y', 'N', 'C', 4});
-    }
-
-    public void sendReset() {
-        if (DEBUG) System.out.println("Sending RST-Command...");
-
-        write(new byte[] {'R', 'S', 'T', 4});
-
-        if (DEBUG) System.out.println("Finished sending RST-Command");
     }
 
     private byte[] write(byte[] data) {
@@ -134,7 +111,15 @@ public class Serial {
 
                     if (DEBUG) System.out.println("Received byte '" + b + "'");
 
-                    if (b == 4) {
+                    if (b == 10) {
+                        if (DEBUG) {
+                            System.out.println("Finished transmission '");
+                            for (int i = 0; i < bufferIndex; ++i) {
+                                System.out.println((char) i);
+                            }
+                            System.out.println("'");
+                        }
+
                         this.state = SerialState.RESPONSE_READY;
                     }
                 }
