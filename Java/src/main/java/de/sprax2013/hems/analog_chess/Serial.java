@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -11,41 +12,24 @@ import java.util.concurrent.TimeUnit;
 
 // FIXME: Was a stupid idea. Implementation is okay-ish...
 public class Serial {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private SerialPort port;
     private ExecutorService thread;
     private byte[] buffer;
     private int bufferIndex;
 
-    private SerialState state;
-
     public SerialPort getPort() {
         return this.port;
     }
 
     private byte[] write(byte[] data) {
-        // Wait until we are ready to write
-        while (true) {
-            if (this.state == SerialState.IDLE) break;
-        }
-
-        this.state = SerialState.BUSY_WRITE;
-
         if (DEBUG) System.out.println("[Serial] Sending: " + Arrays.toString(data));
         this.port.writeBytes(data, data.length);
 
         // Block until data is sent
         while (true) {
             if (this.port.bytesAwaitingWrite() <= 0) break;
-        }
-
-        this.state = SerialState.WAIT_RESPONSE;
-
-        // Wait for the reading thread to finish reading
-        while (true) {
-            //noinspection ConstantConditions
-            if (this.state == SerialState.RESPONSE_READY) break;
         }
 
         if (DEBUG) {
@@ -63,10 +47,32 @@ public class Serial {
         Arrays.fill(this.buffer, (byte) 0);
         this.bufferIndex = 0;
 
-        // Reset state
-        this.state = SerialState.IDLE;
-
         return result;
+    }
+
+    public void onInput(byte[] data) {
+        try {
+            String dataStr = new String(data, StandardCharsets.US_ASCII);
+
+            if (dataStr.startsWith("State:")) {
+                boolean[] board = new boolean[64];
+                int boardIndex = 0;
+
+                for (int i = 6; i < data.length; ++i) {
+                    char c = dataStr.charAt(i);
+
+                    if (Character.isWhitespace(c)) continue;
+
+                    board[boardIndex++] = c == '1';
+                }
+
+                if (Main.gui != null) {
+                    Main.gui.setHighlightedFields(board);
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public void start(int baudRate) {
@@ -86,8 +92,7 @@ public class Serial {
         this.port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED);
         this.port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 0, 0);
 
-        this.buffer = new byte[10];
-        this.state = SerialState.IDLE;
+        this.buffer = new byte[128];
 
         thread = Executors.newSingleThreadExecutor();
         thread.execute(() -> {
@@ -113,20 +118,29 @@ public class Serial {
 
                     if (b == 10) {
                         if (DEBUG) {
-                            System.out.println("Finished transmission '");
+                            System.out.print("Finished transmission '");
                             for (int i = 0; i < bufferIndex; ++i) {
-                                System.out.println((char) i);
+                                System.out.print((char) buffer[i]);
                             }
                             System.out.println("'");
                         }
 
-                        this.state = SerialState.RESPONSE_READY;
+                        if (bufferIndex > 0) {
+                            onInput(Arrays.copyOfRange(this.buffer, 0, bufferIndex - 1));
+                        }
+
+                        Arrays.fill(this.buffer, (byte) 0);
+                        this.bufferIndex = 0;
                     }
                 }
             }
 
             System.out.println("Terminating read-thread");
         });
+
+        if (DEBUG) {
+            System.out.println("[Serial] Ready.");
+        }
 
 //        sendReset();
     }
@@ -168,7 +182,7 @@ public class Serial {
                         this.port = ports[Integer.parseInt(inStr)];
                         return;
                     } catch (NumberFormatException | ArrayIndexOutOfBoundsException ex) {
-                        System.err.println("Ungültige Port-Nummer");
+                        System.err.println("\nUngültige Port-Nummer");
                     }
                 }
             }

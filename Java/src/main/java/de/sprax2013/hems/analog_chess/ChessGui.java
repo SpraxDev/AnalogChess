@@ -27,6 +27,9 @@ public class ChessGui {
     private static final Border LOWERED_BORDER = BorderFactory.createBevelBorder(BevelBorder.LOWERED);
     private static final Border PADDING_BORDER = BorderFactory.createEmptyBorder(2, 2, 2, 2);
 
+    private static final Border DEBUG_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
+            BorderFactory.createLineBorder(Color.WHITE, 2, false));
+
     private static final Border NORMAL_MOVE_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
             BorderFactory.createLineBorder(Color.GREEN, 2, false));
     private static final Border ATTACK_MOVE_BORDER = BorderFactory.createCompoundBorder(PADDING_BORDER,
@@ -66,16 +69,6 @@ public class ChessGui {
             } catch (IOException ex) {
                 System.err.println("Error setting app icon: " + ex.getMessage());
             }
-
-//            gui.getContentPane().addComponentListener(new ComponentAdapter() {
-//                public void componentResized(ComponentEvent e) {
-//                    int size = Math.min(gui.getWidth(), gui.getHeight());
-//
-//                    mainPanel.setSize(size, size);
-//
-//                    System.out.println(mainPanel.getWidth() + ", " + mainPanel.getHeight());
-//                }
-//            });
 
             boolean b = false;
             for (int i = 0; i < this.fieldPanels.length; ++i) {
@@ -124,6 +117,18 @@ public class ChessGui {
 
             update();
             frame.setVisible(true);
+        });
+    }
+
+    public void setHighlightedFields(boolean[] fields) {
+        if (fields.length != 64) throw new IllegalArgumentException("Array is not 64 large");
+
+        SwingUtilities.invokeLater(() -> {
+            synchronized (this.gui.getTreeLock()) {
+                for (int i = 0; i < fieldPanels.length; ++i) {
+                    this.fieldPanels[i].setBorder(fields[i] ? DEBUG_BORDER : null);
+                }
+            }
         });
     }
 

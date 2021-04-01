@@ -4,6 +4,7 @@ import java.io.IOException;
 
 public class Main {
     private static Serial serial;
+    static ChessGui gui;
 
     public static void main(String[] args) throws IOException {
         serial = new Serial();
@@ -19,23 +20,9 @@ public class Main {
         serial.promptPortSelection();
 
         if (serial.getPort() != null) {
-            serial.start(14400);
-
-//            System.out.println(Arrays.toString(serial.requestBoard()));
+            serial.start(9600);
         }
 
-//        HemsSerial s = new HemsSerial("ttyUSB0", 14400, 8, 1, 0);
-//        if (s.open()) {
-//            System.out.println("Sending...");
-//            s.write("Huso");
-//
-//            while (true) {
-//                if (s.dataAvailable() > 0) {
-//                    System.out.println(s.read());
-//                }
-//            }
-//        }
-
-//        new ChessGui(new ChessGame());
+        gui = new ChessGui(new ChessGame());
     }
 }

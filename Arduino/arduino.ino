@@ -84,6 +84,7 @@ void loop() {
     }
 
     onSYNC();
+    delay(1000);
 }
 
 void serialEvent() {
